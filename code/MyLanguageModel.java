@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.*;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -16,8 +18,8 @@ public class MyLanguageModel extends JFrame {
     private DefaultTableModel tableModel;
     private JLabel lblStatus;
     private JTextArea txtStats; 
-    private HistogramPanel histogramPanel; // New Custom Component
-    private JComboBox<String> cmbHashFunction; // New Selector
+    private HistogramPanel histogramPanel; 
+    private JComboBox<String> cmbHashFunction; 
 
     // Data Structures
     private MyHashTable unigramTable;
@@ -39,20 +41,17 @@ public class MyLanguageModel extends JFrame {
         // --- Top Panel: Controls ---
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         
-        // File Loader
         JButton btnLoad = new JButton("Load news.txt");
         
-        // Hash Function Selector (Task 2 & Design Improvement)
         JLabel lblHash = new JLabel("Hash Function:");
         String[] hashOptions = {"Polynomial Hash", "First Letter Hash"};
         cmbHashFunction = new JComboBox<>(hashOptions);
         
-        // Sorting
         JButton btnSortAlpha = new JButton("Sort by Word");
         JButton btnSortCount = new JButton("Sort by Count");
         
         topPanel.add(btnLoad);
-        topPanel.add(Box.createHorizontalStrut(20)); // Spacer
+        topPanel.add(Box.createHorizontalStrut(20));
         topPanel.add(lblHash);
         topPanel.add(cmbHashFunction);
         topPanel.add(Box.createHorizontalStrut(20));
@@ -62,24 +61,19 @@ public class MyLanguageModel extends JFrame {
         this.add(topPanel, BorderLayout.NORTH);
 
         // --- Center Area ---
-        
-        // 1. Left: Vocabulary Table
         String[] columns = {"Word/Gram", "Count"};
         tableModel = new DefaultTableModel(columns, 0);
         vocabularyTable = new JTable(tableModel);
         JScrollPane scrollTable = new JScrollPane(vocabularyTable);
         
-        // 2. Bottom Left: Statistics & Chart (The "Stylish" part)
         JPanel statsContainer = new JPanel(new BorderLayout());
         
-        // Text Stats
         txtStats = new JTextArea(4, 25);
         txtStats.setEditable(false);
         txtStats.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane scrollStats = new JScrollPane(txtStats);
         scrollStats.setBorder(BorderFactory.createTitledBorder("Mathematical Stats"));
         
-        // Histogram Chart
         histogramPanel = new HistogramPanel();
         histogramPanel.setBorder(BorderFactory.createTitledBorder("Collision Distribution (Graph)"));
         
@@ -87,11 +81,9 @@ public class MyLanguageModel extends JFrame {
         statsContainer.add(scrollStats, BorderLayout.SOUTH);
         statsContainer.setPreferredSize(new Dimension(400, 300));
 
-        // Combine Table and Stats into a Split Pane
         JSplitPane leftSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollTable, statsContainer);
         leftSplit.setDividerLocation(350);
 
-        // 3. Right: Prediction Interface
         txtInput = new JTextArea(3, 30);
         txtInput.setLineWrap(true);
         txtInput.setBorder(BorderFactory.createTitledBorder("Input (Start words)"));
@@ -117,12 +109,10 @@ public class MyLanguageModel extends JFrame {
         predictionPanel.add(inputWrapper, BorderLayout.NORTH);
         predictionPanel.add(new JScrollPane(txtOutput), BorderLayout.CENTER);
 
-        // Main Split: Left (Data) vs Right (Func)
         JSplitPane mainSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, predictionPanel);
         mainSplit.setDividerLocation(450);
         this.add(mainSplit, BorderLayout.CENTER);
 
-        // --- Bottom: Status Bar ---
         lblStatus = new JLabel(" Ready to load file.");
         lblStatus.setBorder(BorderFactory.createEtchedBorder());
         this.add(lblStatus, BorderLayout.SOUTH);
@@ -135,9 +125,6 @@ public class MyLanguageModel extends JFrame {
         btnPredictTri.addActionListener(e -> predictNextWords(3));
     }
 
-    /**
-     * Load document using the selected Hash Function Strategy.
-     */
     private void loadDocument() {
         JFileChooser fileChooser = new JFileChooser(".");
         int retval = fileChooser.showOpenDialog(this);
@@ -152,7 +139,6 @@ public class MyLanguageModel extends JFrame {
             int tableSize = 5000; 
             MyHashFunction hf;
             
-            // Strategy Selection (Task 2)
             String selectedHash = (String) cmbHashFunction.getSelectedItem();
             if ("First Letter Hash".equals(selectedHash)) {
                 hf = new FirstLetterHashFunction(tableSize);
@@ -170,32 +156,46 @@ public class MyLanguageModel extends JFrame {
             String line;
             String prevWord = null;
             String prevPrevWord = null;
+            
+            // Regex for valid words: only a-z, dot, apostrophe
+            Pattern validPattern = Pattern.compile("^[a-z\\.\\']+$");
+            boolean warningShown = false;
 
             while ((line = br.readLine()) != null) {
-                line = line.toLowerCase();
-                StringBuilder cleanLine = new StringBuilder();
-                for (char c : line.toCharArray()) {
-                    if ((c >= 'a' && c <= 'z') || c == '.' || c == '\'' || c == ' ') {
-                        cleanLine.append(c);
-                    } else {
-                        cleanLine.append(' ');
-                    }
-                }
+                line = line.trim().toLowerCase();
+                if (line.isEmpty()) continue;
+
+                // Split by whitespace
+                String[] tokens = line.split("\\s+");
                 
-                String[] words = cleanLine.toString().split("\\s+");
-                for (String w : words) {
-                    if (w.isEmpty()) continue;
-                    unigramTable.insert(w);
+                for (String token : tokens) {
+                    // Task 4: Check for invalid characters
+                    Matcher m = validPattern.matcher(token);
+                    if (!m.matches()) {
+                        if (!warningShown) {
+                            JOptionPane.showMessageDialog(this, 
+                                "Warning: Mis-processed item found: \"" + token + "\"\n" + 
+                                "Only 'a-z', '.', and ''' are allowed.\n" +
+                                "This item will be skipped (and subsequent errors suppressed).",
+                                "Invalid Input Detected", 
+                                JOptionPane.WARNING_MESSAGE);
+                            warningShown = true;
+                        }
+                        continue; // Skip invalid word
+                    }
+
+                    // Valid word processing
+                    unigramTable.insert(token);
                     totalWordCount++;
                     
                     if (prevWord != null) {
-                        bigramTable.insert(prevWord + " " + w);
+                        bigramTable.insert(prevWord + " " + token);
                         if (prevPrevWord != null) {
-                            trigramTable.insert(prevPrevWord + " " + prevWord + " " + w);
+                            trigramTable.insert(prevPrevWord + " " + prevWord + " " + token);
                         }
                     }
                     prevPrevWord = prevWord;
-                    prevWord = w;
+                    prevWord = token;
                 }
             }
             br.close();
@@ -210,15 +210,12 @@ public class MyLanguageModel extends JFrame {
         }
     }
 
-    /**
-     * Calculate stats and update BOTH the text area AND the chart.
-     */
     private void calculateStatistics() {
         if (unigramTable == null) return;
         
         MyLinkedObject[] table = unigramTable.getTable();
         List<Integer> lengths = new ArrayList<>();
-        Map<Integer, Integer> lengthDist = new TreeMap<>(); // For the Histogram
+        Map<Integer, Integer> lengthDist = new TreeMap<>(); 
         
         long sum = 0;
         int nonEmptySlots = 0;
@@ -234,14 +231,11 @@ public class MyLanguageModel extends JFrame {
             if (len > 0) nonEmptySlots++;
             sum += len;
             
-            // Count distribution for Graph
             lengthDist.put(len, lengthDist.getOrDefault(len, 0) + 1);
         }
         
-        // Update Chart
         histogramPanel.setDistribution(lengthDist);
         
-        // Update Text Stats
         double avg = (double) sum / table.length; 
         double varianceSum = 0;
         for (int len : lengths) {
@@ -321,14 +315,24 @@ public class MyLanguageModel extends JFrame {
         MyHashTable targetTable = (n == 3) ? trigramTable : bigramTable;
         if (targetTable == null) return null;
 
+        // Iterate through all slots - simplistic but meets requirement (Task 5 "crude approach")
         for (MyLinkedObject node : targetTable.getTable()) {
             MyLinkedObject curr = node;
             while (curr != null) {
                 String key = curr.getWord();
+                // Check if key is "prefix + word"
                 if (key.startsWith(prefix + " ")) {
-                    if (curr.getCount() > maxCount) {
-                        maxCount = curr.getCount();
-                        bestWord = key.substring(prefix.length() + 1);
+                    // Extract the next word (suffix)
+                    // Be careful: "prefix word" -> length of prefix + 1
+                    if (key.length() > prefix.length() + 1) {
+                        String suffix = key.substring(prefix.length() + 1);
+                        // Ensure it's just one word (simplification)
+                        if (!suffix.contains(" ")) {
+                            if (curr.getCount() > maxCount) {
+                                maxCount = curr.getCount();
+                                bestWord = suffix;
+                            }
+                        }
                     }
                 }
                 curr = curr.getNext();

@@ -3,67 +3,49 @@ public class MyLinkedObject {
     private int count;
     private MyLinkedObject next;
 
-    /**
-     * Constructor (Task 1)
-     */
-    public MyLinkedObject(String w) {
-        this.word = w;
-        this.count = 1;
-        this.next = null;
+    public MyLinkedObject(String w){
+        this.word = w;  // assign word
+        this.count = 1;  // initial values
+        this.next = null; // initial values
     }
 
     /**
-     * Task 1: setWord - Recursive implementation
-     * Adds a word or increments count if it exists. Maintain alphabetical order.
+     * Add word into linked list in alphabetical order or increment count
+     * @param w word needed to add
      */
-    public void setWord(String w) {
-        int comparison = w.compareTo(this.word);
-
-        if (comparison == 0) {
-            // Word matches, increment count
+    public void setWord(String w){
+        // 1. 检查当前节点是否就是要找的单词 (修复点：之前缺少了这个检查)
+        if (this.word.equals(w)) {
             this.count++;
-        } else if (comparison < 0) {
-            // This case should technically be handled by the caller (HashTable) or previous node
-            // But if we are at head and w is smaller, logic is handled outside.
-            // However, if we are inside the list:
-            // This situation usually implies inserting *before* current, which is hard in singly linked list without prev.
-            // The standard recursive logic often assumes we look ahead.
-            // Let's follow the standard "insert into sorted list" pattern compatible with the PDF description.
-            // NOTE: The PDF suggests: "If next object exists, and if w is alphabetically smaller than next... insert between".
-            
-            // This method is called on 'this'. 
-            // If w > this.word, we look at next.
-            if (this.next == null) {
-                this.next = new MyLinkedObject(w);
-            } else {
-                if (w.compareTo(this.next.word) < 0) {
-                    // w is smaller than next, insert between this and next
-                    MyLinkedObject newNode = new MyLinkedObject(w);
-                    newNode.next = this.next;
-                    this.next = newNode;
-                } else {
-                    // w is larger or equal to next, recurse
-                    this.next.setWord(w);
-                }
-            }
+            return;
+        }
+
+        // 2. 如果没有下一个节点，直接追加
+        if (this.next == null) {
+            this.next = new MyLinkedObject(w);
+            return;
+        }
+        
+        // 3. 检查下一个节点是否匹配
+        if (w.equals(this.next.word)) {
+            this.next.count++;
+            return;
+        }
+
+        // 4. 按字母顺序插入到当前节点和下一个节点之间
+        if (w.compareTo(this.next.word) < 0) {
+            MyLinkedObject newObj = new MyLinkedObject(w);
+            newObj.next = this.next;
+            this.next = newObj;
         } else {
-            // w > this.word
-            if (this.next == null) {
-                this.next = new MyLinkedObject(w);
-            } else if (w.compareTo(this.next.word) < 0) {
-                // Insert between this and next
-                MyLinkedObject newNode = new MyLinkedObject(w);
-                newNode.next = this.next;
-                this.next = newNode;
-            } else {
-                // Pass to next
-                this.next.setWord(w);
-            }
+            // 5. 递归传递给下一个节点
+            this.next.setWord(w);
         }
     }
 
     /**
-     * Task 1: isWord - Recursive implementation
+     * Task 1: Returns true if the parameter w matches the word field of this object.
+     * Recursive implementation.
      */
     public boolean isWord(String w) {
         if (this.word.equals(w)) {
@@ -76,7 +58,8 @@ public class MyLinkedObject {
     }
 
     /**
-     * Task 1: getCount - Recursive implementation
+     * Task 1: Returns the value stored in the count field if w matches.
+     * Recursive implementation.
      */
     public int getCount(String w) {
         if (this.word.equals(w)) {
@@ -88,11 +71,35 @@ public class MyLinkedObject {
         return this.next.getCount(w);
     }
 
-    // Getters and Setters
-    public String getWord() { return word; }
-    public int getCount() { return count; }
-    public MyLinkedObject getNext() { return next; }
-    public void setNext(MyLinkedObject next) { this.next = next; }
-    public void setWordField(String w) { this.word = w; } // Helper if needed
-    public void setCount(int c) { this.count = c; }
+    public void setCount(int count) {
+        this.count = count;
+    }
+
+    public void setNext(MyLinkedObject next) {
+        this.next = next;
+    }
+
+    public String getWord() {
+        return word;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public MyLinkedObject getNext() {
+        return next;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder output = new StringBuilder();
+        output.append(word).append(":").append(count);
+        
+        if (next != null) {
+            output.append(" -> ");
+            output.append(next.toString());
+        }
+        return output.toString();
+    }
 }
