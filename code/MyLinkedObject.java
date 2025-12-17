@@ -4,102 +4,85 @@ public class MyLinkedObject {
     private MyLinkedObject next;
 
     public MyLinkedObject(String w){
-        this.word = w;  // assign word
-        this.count = 1;  // initial values
-        this.next = null; // initial values
+        this.word = w;
+        this.count = 1;
+        this.next = null;
     }
 
     /**
-     * Add word into linked list in alphabetical order or increment count
-     * @param w word needed to add
+     * 【关键修改】将递归改为循环 (Iterative)，防止 StackOverflowError
      */
     public void setWord(String w){
-        // 1. 检查当前节点是否就是要找的单词 (修复点：之前缺少了这个检查)
+        // 1. 检查头节点（当前节点）是否匹配
         if (this.word.equals(w)) {
             this.count++;
             return;
         }
 
-        // 2. 如果没有下一个节点，直接追加
-        if (this.next == null) {
-            this.next = new MyLinkedObject(w);
-            return;
-        }
-        
-        // 3. 检查下一个节点是否匹配
-        if (w.equals(this.next.word)) {
-            this.next.count++;
-            return;
+        MyLinkedObject current = this;
+
+        // 使用循环遍历链表，寻找插入位置
+        while (current.next != null) {
+            // 2. 检查下一个节点是否匹配
+            if (current.next.word.equals(w)) {
+                current.next.count++;
+                return;
+            }
+
+            // 3. 按字母顺序插入到 current 和 current.next 之间
+            // 如果 w 小于下一个单词，说明找到了插入位置
+            if (w.compareTo(current.next.word) < 0) {
+                MyLinkedObject newObj = new MyLinkedObject(w);
+                newObj.next = current.next;
+                current.next = newObj;
+                return;
+            }
+
+            // 移动到下一个节点
+            current = current.next;
         }
 
-        // 4. 按字母顺序插入到当前节点和下一个节点之间
-        if (w.compareTo(this.next.word) < 0) {
-            MyLinkedObject newObj = new MyLinkedObject(w);
-            newObj.next = this.next;
-            this.next = newObj;
-        } else {
-            // 5. 递归传递给下一个节点
-            this.next.setWord(w);
-        }
+        // 4. 如果遍历完还没找到（说明 w 比链表中所有词都大），追加到末尾
+        current.next = new MyLinkedObject(w);
     }
 
     /**
-     * Task 1: Returns true if the parameter w matches the word field of this object.
-     * Recursive implementation.
+     * 同样建议将查询也改为循环，防止查询深层节点时崩溃
      */
     public boolean isWord(String w) {
-        if (this.word.equals(w)) {
-            return true;
+        MyLinkedObject current = this;
+        while (current != null) {
+            if (current.word.equals(w)) {
+                return true;
+            }
+            current = current.next;
         }
-        if (this.next == null) {
-            return false;
-        }
-        return this.next.isWord(w);
+        return false;
     }
 
     /**
-     * Task 1: Returns the value stored in the count field if w matches.
-     * Recursive implementation.
+     * 同样建议将获取计数也改为循环
      */
     public int getCount(String w) {
-        if (this.word.equals(w)) {
-            return this.count;
+        MyLinkedObject current = this;
+        while (current != null) {
+            if (current.word.equals(w)) {
+                return current.count;
+            }
+            current = current.next;
         }
-        if (this.next == null) {
-            return 0;
-        }
-        return this.next.getCount(w);
+        return 0;
     }
 
-    public void setCount(int count) {
-        this.count = count;
-    }
-
-    public void setNext(MyLinkedObject next) {
-        this.next = next;
-    }
-
-    public String getWord() {
-        return word;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
-    public MyLinkedObject getNext() {
-        return next;
-    }
+    // Getters and Setters
+    public void setCount(int count) { this.count = count; }
+    public void setNext(MyLinkedObject next) { this.next = next; }
+    public String getWord() { return word; }
+    public int getCount() { return count; }
+    public MyLinkedObject getNext() { return next; }
 
     @Override
     public String toString() {
-        StringBuilder output = new StringBuilder();
-        output.append(word).append(":").append(count);
-        
-        if (next != null) {
-            output.append(" -> ");
-            output.append(next.toString());
-        }
-        return output.toString();
+        return word + ":" + count + (next != null ? " -> " + next.toString() : "");
     }
 }
